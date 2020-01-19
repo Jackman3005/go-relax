@@ -17,33 +17,36 @@ const (
 )
 
 type CloudFoundryApp struct {
-	cfAppGUID    string // cf app my-app-name --guid
-	currentState AppState
+	CFAppGUID    string // cf app my-app-name --guid
+	CurrentState AppState
 }
 
-var cfClient, _ = cfclient.NewClient(&cfclient.Config{
-	ApiAddress: "https://api.run.pivotal.io",
-	Username:   "jackman3000@gmail.com",
-	Password:   "1hGGrmZ3bl%uEvgb*2@bNy&92jO6BH",
-})
+var _cfClient *cfclient.Client
+func cfClient() *cfclient.Client {
+	if _cfClient == nil {
+		config := loadConfiguration()
+		_cfClient, _= cfclient.NewClient(&config.CFClientConfig)
+	}
+	return _cfClient
+}
 
 func (app *CloudFoundryApp) printSummary() {
 	// TODO: Print summary of space, app name, routes, etc.
-	cfApp, _ := cfClient.GetAppByGuid(app.cfAppGUID)
+	cfApp, _ := cfClient().GetAppByGuid(app.CFAppGUID)
 	app.updateState()
-	fmt.Println(app.cfAppGUID + " is " + string(app.currentState) + " with " + strconv.Itoa(cfApp.Instances) + " instances")
+	fmt.Println(app.CFAppGUID + " is " + string(app.CurrentState) + " with " + strconv.Itoa(cfApp.Instances) + " instances")
 }
 
 func (app *CloudFoundryApp) canAppReceiveRequests() bool {
-	return app.currentState == APP_RUNNING
+	return app.CurrentState == APP_RUNNING
 }
 
 func (app *CloudFoundryApp) updateState() {
 	fmt.Print("Checking app state...")
-	stats, err := cfClient.GetAppStats(app.cfAppGUID)
+	stats, err := cfClient().GetAppStats(app.CFAppGUID)
 	if err != nil {
 		if strings.Contains(err.Error(), "CF-AppStoppedStatsError") {
-			app.currentState = APP_STOPPED
+			app.CurrentState = APP_STOPPED
 		} else {
 			fmt.Println("ERROR: Checking app stats - ", err)
 		}
@@ -51,16 +54,16 @@ func (app *CloudFoundryApp) updateState() {
 		// assuming ["0"] is the zero-eth instance.
 		// TODO: Iterate over all instances to see if any are RUNNING
 		appState := AppState(stats["0"].State)
-		app.currentState = appState
+		app.CurrentState = appState
 	}
 
-	fmt.Print(string(app.currentState) + "\n")
+	fmt.Print(string(app.CurrentState) + "\n")
 }
 
 func (app *CloudFoundryApp) start() {
-	fmt.Println("Starting app with GUID: " + app.cfAppGUID)
+	fmt.Println("Starting app with GUID: " + app.CFAppGUID)
 
-	err := cfClient.StartApp(app.cfAppGUID)
+	err := cfClient().StartApp(app.CFAppGUID)
 	if err != nil {
 		fmt.Println("Failed to request app to start: ", err)
 	} else {
@@ -68,7 +71,7 @@ func (app *CloudFoundryApp) start() {
 		for serverStarting {
 			app.updateState()
 
-			if app.currentState == APP_RUNNING {
+			if app.CurrentState == APP_RUNNING {
 				fmt.Print("OK! App is ready to receive requests.\n")
 				serverStarting = false
 			} else {
@@ -79,7 +82,7 @@ func (app *CloudFoundryApp) start() {
 }
 
 func (app *CloudFoundryApp) turnAppOff() {
-	err := cfClient.StopApp(app.cfAppGUID)
+	err := cfClient().StopApp(app.CFAppGUID)
 	if err != nil {
 		fmt.Println("Failed to request app to stop: ", err)
 	} else {

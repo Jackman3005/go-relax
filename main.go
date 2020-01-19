@@ -9,12 +9,15 @@ import (
 	"time"
 )
 
-var app = &CloudFoundryApp{
-	cfAppGUID: "a3d07cd1-5d0c-4cfa-8faa-3ad7214be7a1",
-}
+var app CloudFoundryApp
 
 func main() {
+	config := loadConfiguration()
+	app = CloudFoundryApp{
+		CFAppGUID: config.CFAppGUID,
+	}
 	app.printSummary()
+
 	go func() {
 		for true {
 			time.Sleep(15 * time.Second)
@@ -30,7 +33,7 @@ func main() {
 }
 
 func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
-	if app.currentState != APP_RUNNING {
+	if app.CurrentState != APP_RUNNING {
 		fmt.Println("App is currently unavailable")
 		app.start()
 	}
