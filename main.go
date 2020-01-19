@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -8,6 +9,9 @@ import (
 )
 
 func main() {
+	printAppSummary()
+	//turnAppOff()
+
 	// start server
 	http.HandleFunc("/", handleRequestAndRedirect)
 	if err := http.ListenAndServe(getListenAddress(), nil); err != nil {
@@ -30,8 +34,12 @@ func main() {
 	//}
 }
 
-
 func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
+	if !canAppReceiveRequests() {
+		fmt.Println("App is currently unavailable")
+		turnAppOn()
+	}
+
 	url, _ := url.Parse(target)
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
@@ -43,8 +51,6 @@ func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request
 
 	proxy.ServeHTTP(res, req)
 }
-
-
 
 func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
 	url := getEnvOrDefault("TARGET_API_URI", "http://localhost:8080")
