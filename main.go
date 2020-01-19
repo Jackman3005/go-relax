@@ -6,38 +6,33 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"time"
 )
 
+var app = &CloudFoundryApp{
+	cfAppGUID: "a3d07cd1-5d0c-4cfa-8faa-3ad7214be7a1",
+}
+
 func main() {
-	printAppSummary()
-	//turnAppOff()
+	app.printSummary()
+	go func() {
+		for true {
+			time.Sleep(15 * time.Second)
+			app.updateState()
+		}
+	}()
 
 	// start server
 	http.HandleFunc("/", handleRequestAndRedirect)
 	if err := http.ListenAndServe(getListenAddress(), nil); err != nil {
 		panic(err)
 	}
-	//var j int
-	//_ = j
-	//
-	//for i:=0; i < 10000; i++ {
-	//	prime:=true
-	//	for k:=i-1; k > 1; k-- {
-	//		if i%k == 0 {
-	//			prime = false
-	//			break
-	//		}
-	//	}
-	//	if prime {
-	//		fmt.Println(i)
-	//	}
-	//}
 }
 
 func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
-	if !canAppReceiveRequests() {
+	if app.currentState != APP_RUNNING {
 		fmt.Println("App is currently unavailable")
-		turnAppOn()
+		app.start()
 	}
 
 	url, _ := url.Parse(target)
