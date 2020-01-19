@@ -8,9 +8,10 @@ import (
 )
 
 type Configuration struct {
-	CFClientConfig cfclient.Config `json:"cf_client_config"` // cf client configuration
-	CFAppGUID      string          `json:"app_guid"`           // `cf app my-app-name --guid`
-	TargetURL      string          `json:"target_url"`       // URL that this will be a proxy in front of
+	CFClientConfig      cfclient.Config `json:"cf_client_config"`     // cf client configuration
+	CFAppGUID           string          `json:"app_guid"`             // `cf app my-app-name --guid`
+	TargetURL           string          `json:"target_url"`           // URL that this will be a proxy in front of
+	InactivityThreshold string          `json:"inactivity_threshold"` // Duration format of go. e.g. 1h10m12s
 }
 
 func loadConfiguration() Configuration {
